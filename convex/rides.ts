@@ -321,3 +321,50 @@ export const getCurrentRide = query({
     return ride;
   },
 });
+
+// Delete ride (admin only)
+export const deleteRide = mutation({
+  args: {
+    rideId: v.id("rides"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    
+    // Check if admin
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user_id", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!profile || profile.role !== "admin") {
+      throw new Error("Admin access required");
+    }
+
+    const ride = await ctx.db.get(args.rideId);
+    if (!ride) throw new Error("Ride not found");
+
+    // If ride was completed, we might need to adjust revenue tracking
+    // For now, just delete the ride
+    await ctx.db.delete(args.rideId);
+
+    // If driver was assigned and is still busy, set them back to online
+    if (ride.driverId && ["accepted", "driver_arriving", "in_progress"].includes(ride.status)) {
+      const driver = await ctx.db
+        .query("drivers")
+        .withIndex("by_user_id", (q) => q.eq("userId", ride.driverId!))
+        .unique();
+
+      if (driver) {
+        await ctx.db.patch(driver._id, {
+          status: "online",
+        });
+      }
+    }
+
+    return args.rideId;
+  },
+});

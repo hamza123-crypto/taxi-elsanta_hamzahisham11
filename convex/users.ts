@@ -2,13 +2,28 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
-// Egyptian cities list
+// El-Santa Center villages and cities
 const EGYPTIAN_CITIES = [
-  "القاهرة", "الجيزة", "الإسكندرية", "الشرقية", "المنوفية", "القليوبية", 
-  "البحيرة", "كفر الشيخ", "الغربية", "الدقهلية", "دمياط", "بورسعيد", 
-  "الإسماعيلية", "السويس", "شمال سيناء", "جنوب سيناء", "الفيوم", 
-  "بني سويف", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", 
-  "البحر الأحمر", "الوادي الجديد", "مطروح"
+  "السنطة", // مدينة (عاصمة المركز)
+  "شبراقاص", // قرية
+  "الجعفرية", // قرية
+  "كفر كلا الباب", // قرية
+  "بلكيم", // قرية
+  "ميت يزيد", // قرية
+  "القرشية", // قرية
+  "شنراق", // قرية
+  "دمنهور الوحش", // قرية
+  "ميت حواي", // قرية
+  "ميت غزال", // قرية
+  "مسحلة", // قرية
+  "كفر الحاج داود", // قرية
+  "كفر سالم النحال", // قرية
+  "كفر الجعفرية", // قرية
+  "كفر ميت يزيد", // قرية
+  "تطاي", // قرية
+  "كفر شبراقاص", // قرية
+  "كفر بلكيم", // قرية
+  "الكرما", // قرية
 ];
 
 // Admin secret code
@@ -109,7 +124,7 @@ export const createProfile = mutation({
 
     // If driver, create driver record - ALL drivers need verification
     if (finalRole === "driver" && args.carNumber && args.licenseNumber) {
-      await ctx.db.insert("drivers", {
+      const driverId = await ctx.db.insert("drivers", {
         userId,
         carNumber: args.carNumber,
         licenseNumber: args.licenseNumber,
@@ -122,6 +137,15 @@ export const createProfile = mutation({
         criminalRecordId: args.criminalRecordId!,
         idCardImageId: args.idCardImageId!,
         licenseImageId: args.licenseImageId!,
+      });
+
+      // Create payment record for driver registration fee (200 EGP)
+      await ctx.db.insert("paymentRecords", {
+        userId,
+        driverId,
+        amount: 200,
+        type: "driver_registration",
+        createdAt: Date.now(),
       });
     }
 

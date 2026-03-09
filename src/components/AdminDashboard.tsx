@@ -7,10 +7,13 @@ export function AdminDashboard() {
   const allUsers = useQuery(api.admin.getAllUsers);
   const allRides = useQuery(api.admin.getAllRides);
   const pendingVerifications = useQuery(api.admin.getPendingVerifications);
+  const allDrivers = useQuery(api.admin.getAllDrivers);
   
   const toggleUserStatus = useMutation(api.admin.toggleUserStatus);
   const initializeSettings = useMutation(api.admin.initializeSettings);
   const verifyDriver = useMutation(api.admin.verifyDriver);
+  const deleteUser = useMutation(api.admin.deleteUser);
+  const deleteRide = useMutation(api.rides.deleteRide);
 
   const handleToggleUser = async (userId: string) => {
     try {
@@ -18,6 +21,32 @@ export function AdminDashboard() {
       toast.success("تم تحديث حالة المستخدم");
     } catch (error) {
       toast.error("حدث خطأ أثناء تحديث حالة المستخدم");
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`هل أنت متأكد من حذف المستخدم "${userName}"؟\n\nهذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع بيانات المستخدم والوثائق المرتبطة به.`)) {
+      return;
+    }
+
+    try {
+      await deleteUser({ userId: userId as any });
+      toast.success("تم حذف المستخدم بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء حذف المستخدم");
+    }
+  };
+
+  const handleDeleteRide = async (rideId: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذه الرحلة؟\n\nهذا الإجراء لا يمكن التراجع عنه.")) {
+      return;
+    }
+
+    try {
+      await deleteRide({ rideId: rideId as any });
+      toast.success("تم حذف الرحلة بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء حذف الرحلة");
     }
   };
 
@@ -285,6 +314,12 @@ export function AdminDashboard() {
                       >
                         {user.isActive ? "تعطيل" : "تفعيل"}
                       </button>
+                      <button
+                        onClick={() => handleDeleteUser(user.userId, user.name)}
+                        className="px-4 py-2 rounded-lg text-xs font-bold bg-red-500 text-white hover:bg-red-600 transition-all"
+                      >
+                        حذف
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -293,6 +328,119 @@ export function AdminDashboard() {
           </div>
         ) : (
           <p className="text-gray-600 text-center py-8">لا يوجد مستخدمين</p>
+        )}
+      </div>
+
+      {/* Drivers Management */}
+      <div className="bg-gradient-to-br from-white to-green-50 rounded-2xl shadow-xl p-8 border border-green-200">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+          <span className="text-3xl">🛺</span>
+          قائمة السائقين الكامل
+        </h2>
+        {allDrivers && allDrivers.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="text-right py-3 font-bold">الاسم</th>
+                  <th className="text-right py-3 font-bold">البريد الإلكتروني</th>
+                  <th className="text-right py-3 font-bold">الهاتف</th>
+                  <th className="text-right py-3 font-bold">المكان</th>
+                  <th className="text-right py-3 font-bold">رقم التوك توك</th>
+                  <th className="text-right py-3 font-bold">رخصة القيادة</th>
+                  <th className="text-right py-3 font-bold">الحالة</th>
+                  <th className="text-right py-3 font-bold">التوثيق</th>
+                  <th className="text-right py-3 font-bold">المدفوعات</th>
+                  <th className="text-right py-3 font-bold">الرحلات</th>
+                  <th className="text-right py-3 font-bold">التقييم</th>
+                  <th className="text-right py-3 font-bold">المستندات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allDrivers.map((driver) => (
+                  <tr key={driver._id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 font-medium">{driver.name}</td>
+                    <td className="py-3 text-gray-600">{driver.email || "غير محدد"}</td>
+                    <td className="py-3 text-gray-600">{driver.phone}</td>
+                    <td className="py-3 text-gray-600">{driver.city || "غير محدد"}</td>
+                    <td className="py-3 text-gray-600">{driver.driver?.carNumber || "-"}</td>
+                    <td className="py-3 text-gray-600">{driver.driver?.licenseNumber || "-"}</td>
+                    <td className="py-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        driver.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                      }`}>
+                        {driver.isActive ? "✅ نشط" : "❌ معطل"}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      {driver.driver && (
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          driver.driver.verificationStatus === "verified" ? "bg-green-100 text-green-800" :
+                          driver.driver.verificationStatus === "pending_verification" ? "bg-yellow-100 text-yellow-800" :
+                          "bg-red-100 text-red-800"
+                        }`}>
+                          {driver.driver.verificationStatus === "verified" && "✅ موثق"}
+                          {driver.driver.verificationStatus === "pending_verification" && "⏳ قيد المراجعة"}
+                          {driver.driver.verificationStatus === "rejected" && "❌ مرفوض"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 font-bold text-green-600">
+                      {driver.totalPaid || 0} جنيه
+                    </td>
+                    <td className="py-3 font-bold text-blue-600">
+                      {driver.driver?.totalRides || 0}
+                    </td>
+                    <td className="py-3">
+                      <div className="flex items-center gap-1">
+                        <span className="text-yellow-500">⭐</span>
+                        <span className="font-bold">{(driver.driver?.rating || 5.0).toFixed(1)}</span>
+                      </div>
+                    </td>
+                    <td className="py-3">
+                      <div className="flex gap-2">
+                        {driver.criminalRecordUrl && (
+                          <a 
+                            href={driver.criminalRecordUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 text-xs"
+                            title="فيش وتشبيه"
+                          >
+                            📄
+                          </a>
+                        )}
+                        {driver.idCardUrl && (
+                          <a 
+                            href={driver.idCardUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-green-600 hover:text-green-800 text-xs"
+                            title="البطاقة"
+                          >
+                            🆔
+                          </a>
+                        )}
+                        {driver.licenseUrl && (
+                          <a 
+                            href={driver.licenseUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-purple-600 hover:text-purple-800 text-xs"
+                            title="الرخصة"
+                          >
+                            🪪
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-600 text-center py-8">لا يوجد سائقين</p>
         )}
       </div>
 
@@ -342,8 +490,17 @@ export function AdminDashboard() {
                     <td className="py-3 text-gray-500">
                       {new Date(ride._creationTime).toLocaleDateString('ar-EG')}
                     </td>
+                    <td className="py-3">
+                      <button
+                        onClick={() => handleDeleteRide(ride._id)}
+                        className="px-4 py-2 rounded-lg text-xs font-bold bg-red-500 text-white hover:bg-red-600 transition-all"
+                      >
+                        حذف
+                      </button>
+                    </td>
                   </tr>
                 ))}
+
               </tbody>
             </table>
           </div>

@@ -19,9 +19,20 @@ export default function App() {
             <p className="text-sm text-gray-600">منصة النقل المحلية</p>
           </div>
         </div>
-        <Authenticated>
-          <SignOutButton />
-        </Authenticated>
+        <div className="flex items-center gap-4">
+          <a 
+            href="https://wa.me/201009500662" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl transition-all transform hover:scale-105 shadow-lg"
+          >
+            <span className="text-xl">📱</span>
+            <span className="font-bold">01009500662</span>
+          </a>
+          <Authenticated>
+            <SignOutButton />
+          </Authenticated>
+        </div>
       </header>
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-6xl mx-auto">
@@ -57,28 +68,6 @@ function Content() {
   return (
     <div className="flex flex-col gap-8">
       <Unauthenticated>
-        <div className="text-center mb-12">
-          <div className="text-8xl mb-6 animate-bounce">🛺</div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
-            توك توك السنطة
-          </h1>
-          <p className="text-2xl text-gray-700 mb-3">منصة حجز التوك توك المحلية</p>
-          <p className="text-lg text-gray-600 mb-8">سجل دخولك للبدء في رحلتك معنا</p>
-          <div className="flex justify-center gap-8 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <span className="text-green-500">✓</span>
-              <span>أسعار مناسبة</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-500">✓</span>
-              <span>خدمة سريعة</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-500">✓</span>
-              <span>سائقين موثوقين</span>
-            </div>
-          </div>
-        </div>
         <SignInForm />
       </Unauthenticated>
 

@@ -49,6 +49,57 @@ export const getAllUsers = query({
   },
 });
 
+// Get all drivers with complete details (admin only)
+export const getAllDrivers = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await isAdmin(ctx))) {
+      throw new Error("Admin access required");
+    }
+
+    // Get all driver profiles
+    const driverProfiles = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_role", (q) => q.eq("role", "driver"))
+      .collect();
+    
+    const driversWithDetails = await Promise.all(
+      driverProfiles.map(async (profile) => {
+        const user = await ctx.db.get(profile.userId);
+        const driver = await ctx.db
+          .query("drivers")
+          .withIndex("by_user_id", (q) => q.eq("userId", profile.userId))
+          .unique();
+
+        // Get document URLs
+        const criminalRecordUrl = driver?.criminalRecordId ? await ctx.storage.getUrl(driver.criminalRecordId) : null;
+        const idCardUrl = driver?.idCardImageId ? await ctx.storage.getUrl(driver.idCardImageId) : null;
+        const licenseUrl = driver?.licenseImageId ? await ctx.storage.getUrl(driver.licenseImageId) : null;
+
+        // Get payment records for this driver
+        const paymentRecords = driver ? await ctx.db
+          .query("paymentRecords")
+          .withIndex("by_driver_id", (q) => q.eq("driverId", driver._id))
+          .collect() : [];
+
+        const totalPaid = paymentRecords.reduce((sum, record) => sum + record.amount, 0);
+
+        return {
+          ...profile,
+          email: user?.email,
+          driver,
+          criminalRecordUrl,
+          idCardUrl,
+          licenseUrl,
+          totalPaid,
+        };
+      })
+    );
+
+    return driversWithDetails;
+  },
+});
+
 // Get pending verifications (admin only)
 export const getPendingVerifications = query({
   args: {},
@@ -189,12 +240,9 @@ export const getDashboardStats = query({
       ["searching", "accepted", "driver_arriving", "in_progress"].includes(r.status)
     );
 
-    // Calculate revenue from rides + 200 EGP per driver registration
-    const rideRevenue = completedRides.reduce((sum, ride) => 
-      sum + (ride.finalPrice || ride.estimatedPrice), 0
-    );
-    const driverRegistrationFees = totalDrivers.length * 200;
-    const totalRevenue = rideRevenue + driverRegistrationFees;
+    // Calculate revenue ONLY from driver registration fees (not rides)
+    const paymentRecords = await ctx.db.query("paymentRecords").collect();
+    const totalRevenue = paymentRecords.reduce((sum, record) => sum + record.amount, 0);
 
     return {
       totalUsers: totalUsers.length,
@@ -262,5 +310,68 @@ export const initializeSettings = mutation({
     }
 
     return "Settings initialized";
+  },
+});
+
+// Delete user (admin only)
+export const deleteUser = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    if (!(await isAdmin(ctx))) {
+      throw new Error("Admin access required");
+    }
+
+    // Get user profile
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user_id", (q) => q.eq("userId", args.userId))
+      .unique();
+
+    if (!profile) throw new Error("User profile not found");
+
+    // If driver, delete driver record and documents from storage
+    if (profile.role === "driver") {
+      const driver = await ctx.db
+        .query("drivers")
+        .withIndex("by_user_id", (q) => q.eq("userId", args.userId))
+        .unique();
+
+      if (driver) {
+        // Delete stored documents
+        if (driver.criminalRecordId) {
+          await ctx.storage.delete(driver.criminalRecordId);
+        }
+        if (driver.idCardImageId) {
+          await ctx.storage.delete(driver.idCardImageId);
+        }
+        if (driver.licenseImageId) {
+          await ctx.storage.delete(driver.licenseImageId);
+        }
+        
+        // Delete payment records for this driver
+        const paymentRecords = await ctx.db
+          .query("paymentRecords")
+          .withIndex("by_driver_id", (q) => q.eq("driverId", driver._id))
+          .collect();
+        
+        for (const record of paymentRecords) {
+          await ctx.db.delete(record._id);
+        }
+        
+        // Delete driver record
+        await ctx.db.delete(driver._id);
+      }
+    }
+
+    // Delete user profile
+    await ctx.db.delete(profile._id);
+
+    // Delete auth account (this will also delete the user)
+    // Note: Convex Auth doesn't provide a direct way to delete users from server functions
+    // The user will be orphaned but won't have a profile
+    
+    return args.userId;
   },
 });

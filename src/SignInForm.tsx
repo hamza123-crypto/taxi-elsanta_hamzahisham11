@@ -64,6 +64,10 @@ export function SignInForm() {
           </button>
         </div>
       </form>
+      <div className="text-center text-sm text-secondary mt-4">
+        <p className="mb-2 text-gray-700 font-medium">New user?</p>
+        <p className="text-gray-600">After signing in or signing up, you'll be automatically prompted to complete your profile and choose your role (Passenger or Driver)</p>
+      </div>
       <div className="flex items-center justify-center my-3">
         <hr className="my-4 grow border-gray-200" />
         <span className="mx-4 text-secondary">or</span>

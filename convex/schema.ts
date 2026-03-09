@@ -90,6 +90,18 @@ const applicationTables = {
     description: v.string(),
   })
     .index("by_key", ["key"]),
+
+  // Payment records for driver registrations
+  paymentRecords: defineTable({
+    userId: v.id("users"),
+    driverId: v.id("drivers"),
+    amount: v.number(),
+    type: v.literal("driver_registration"),
+    createdAt: v.number(),
+  })
+    .index("by_user_id", ["userId"])
+    .index("by_driver_id", ["driverId"])
+    .index("by_type", ["type"]),
 };
 
 export default defineSchema({

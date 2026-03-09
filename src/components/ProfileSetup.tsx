@@ -219,7 +219,7 @@ export function ProfileSetup() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    المحافظة *
+                    المكان *
                   </label>
                   <select
                     value={city}
@@ -227,7 +227,7 @@ export function ProfileSetup() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     required
                   >
-                    <option value="">اختر المحافظة</option>
+                    <option value="">اختر المكان</option>
                     {cities.map((cityName) => (
                       <option key={cityName} value={cityName}>
                         {cityName}
